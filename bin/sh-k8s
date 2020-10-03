@@ -1,0 +1,48 @@
+#!/bin/sh
+CTX=""
+NS=""
+PD=""
+
+while getopts c:n:p: OPT
+do
+    case $OPT in
+        "c" ) CTX="$OPTARG";;
+        "n" ) NS="$OPTARG";;
+        "p" ) PD="$OPTARG";;
+    esac
+done
+
+# TODO Ctr-C
+set -e
+
+# Select context
+if [ -n "$CTX" ]; then
+  kubectx "$CTX"
+else
+  kubectx
+fi
+
+# Select name space
+if [ -n "$NS" ]; then
+  kubens "$NS"
+else
+  kubens
+fi
+
+if [ -n "$PD" ]; then
+  kubectl exec -it "$PD" sh
+else
+  # Get pod names
+  PODS=(`kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'`)
+
+  # Show interface for selecting pods
+  PS3='Please select the target pod: '
+  select POD in "${PODS[@]}"
+  do
+    # Start attaching
+    kubectl exec -it "$POD" sh
+    break
+  done
+fi
+
+exit 0
